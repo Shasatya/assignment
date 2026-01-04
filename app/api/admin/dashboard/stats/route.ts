@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
+export const runtime = "nodejs";
+
 export async function GET(request: NextRequest) {
   try {
     // Get blog stats
@@ -11,7 +13,7 @@ export async function GET(request: NextRequest) {
     const featuredBlogs = await prisma.blog.count({
       where: { featured: true },
     });
-    
+
     const blogsWithViews = await prisma.blog.aggregate({
       _sum: {
         views: true,
@@ -20,7 +22,7 @@ export async function GET(request: NextRequest) {
     const totalViews = blogsWithViews._sum.views || 0;
 
     // Get category counts
-    const categoryCounts = await prisma.$queryRaw`
+    const categoryCounts = (await prisma.$queryRaw`
       SELECT 
         c.name as category,
         COUNT(b.id)::int as count
@@ -28,7 +30,7 @@ export async function GET(request: NextRequest) {
       LEFT JOIN news_blogs b ON b.category_id = c.id AND b.published = true
       GROUP BY c.id, c.name
       ORDER BY count DESC
-    ` as any[];
+    `) as any[];
 
     // Get category stats
     const totalCategories = await prisma.category.count();
@@ -60,9 +62,12 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error("Error fetching dashboard stats:", error);
     return NextResponse.json(
-      { success: false, message: "Failed to fetch dashboard stats", error: error.message },
+      {
+        success: false,
+        message: "Failed to fetch dashboard stats",
+        error: error.message,
+      },
       { status: 500 }
     );
   }
 }
-
