@@ -1,0 +1,298 @@
+import Link from 'next/link';
+import Image from 'next/image';
+import { format } from 'date-fns';
+import BlogCard from '@/components/BlogCard';
+import { getBlogs } from '@/lib/api';
+import { Clock, Eye, TrendingUp, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+
+// Force dynamic rendering to show fresh content immediately (no caching)
+export const dynamic = 'force-dynamic';
+export const revalidate = 0; // Disable caching completely
+
+type Blog = {
+  _id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  featuredImage: string;
+  category: string;
+  published: boolean;
+  featured: boolean;
+  views: number;
+  createdAt: string;
+  updatedAt: string;
+  author?: string;
+  tags?: string[];
+};
+
+export default async function Home() {
+  // Fetch all published blogs
+  const allBlogs = await getBlogs({ published: true }) as Blog[];
+
+  // Get featured blog for hero section
+  const featuredBlog = allBlogs.find((blog: Blog) => blog.featured) || allBlogs[0];
+
+  // Get trending blogs (by views, top 5)
+  const trendingBlogs = [...allBlogs]
+    .sort((a: Blog, b: Blog) => b.views - a.views)
+    .slice(0, 5);
+
+  // Get latest blogs (excluding featured)
+  const latestBlogs = allBlogs
+    .filter((blog: Blog) => blog.slug !== featuredBlog?.slug)
+    .slice(0, 6);
+
+  // Group blogs by main categories
+  const categoryBlogs = {
+    India: allBlogs.filter((blog: Blog) => blog.category === 'India').slice(0, 4),
+    World: allBlogs.filter((blog: Blog) => blog.category === 'World').slice(0, 4),
+    Sports: allBlogs.filter((blog: Blog) => blog.category === 'Sports').slice(0, 4),
+    Entertainment: allBlogs.filter((blog: Blog) => blog.category === 'Entertainment').slice(0, 4),
+    Technology: allBlogs.filter((blog: Blog) => blog.category === 'Technology').slice(0, 4),
+    Business: allBlogs.filter((blog: Blog) => blog.category === 'Business').slice(0, 4),
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-900 min-h-screen">
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
+        {/* Trending Section */}
+        {trendingBlogs.length > 0 && (
+          <div className="mb-4 sm:mb-6 flex flex-col items-stretch gap-2 sm:gap-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-2 sm:py-3 md:flex-row md:items-center">
+            <div className="flex items-center gap-2 bg-yellow-600 text-white px-3 sm:px-4 py-1.5 sm:py-2">
+              <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="font-bold text-xs sm:text-sm uppercase">TRENDING</span>
+            </div>
+            <div className="flex-1 overflow-hidden min-w-0">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-600 flex-shrink-0" />
+                <Link href={`/blog/${trendingBlogs[0].slug}`} className="group flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+                  <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-gray-100 group-hover:text-yellow-600 transition-colors line-clamp-1 truncate">
+                    {trendingBlogs[0].title}
+                  </h3>
+                  <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap flex-shrink-0">
+                    {format(new Date(trendingBlogs[0].createdAt), 'MMM dd, yyyy')}
+                  </span>
+                </Link>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors">
+                <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-400" />
+              </button>
+              <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors">
+                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-400" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Main Content Grid */}
+        <div className=" lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+          {/* Left Column - Main Content */}
+          <div className="lg:col-span-2 space-y-6 sm:space-y-8">
+            {/* Featured News Section */}
+            {latestBlogs.length > 0 && (
+              <section className="bg-white dark:bg-gray-800">
+                <div className="mb-4 sm:mb-6 pb-2 sm:pb-3 border-b-2 border-yellow-600">
+                  <h2 className="text-xl sm:text-2xl font-bold text-yellow-600 uppercase">FEATURED NEWS</h2>
+                </div>
+                <div className="space-y-4 sm:space-y-6">
+                  {latestBlogs.slice(0, 4).map((blog: Blog) => (
+                    <Link key={blog._id} href={`/blog/${blog.slug}`} className="block group">
+                      <article className="flex flex-col sm:flex-row gap-3 sm:gap-4 pb-4 sm:pb-6 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                        <div className="relative h-40 sm:h-32 w-full sm:w-32 flex-shrink-0 overflow-hidden bg-gray-200 dark:bg-gray-700">
+                          {blog.featuredImage ? (
+                            <Image
+                              src={blog.featuredImage}
+                              alt={blog.title}
+                              fill
+                              className="object-cover group-hover:scale-110 transition-transform duration-300"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-300 dark:bg-gray-600">
+                              <span className="text-gray-400 text-xs">No Image</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="mb-2">
+                            <span className="bg-black text-white px-2 py-1 text-xs font-bold uppercase">
+                              {blog.category}
+                            </span>
+                          </div>
+                          <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 mb-2 group-hover:text-yellow-600 transition-colors line-clamp-2">
+                            {blog.title}
+                          </h3>
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-gray-500 dark:text-gray-400 mb-2">
+                            <span>by News Line</span>
+                            <span className="uppercase hidden sm:inline">{format(new Date(blog.createdAt), 'MMM dd, yyyy').toUpperCase()}</span>
+                            <span className="uppercase sm:hidden">{format(new Date(blog.createdAt), 'MMM dd').toUpperCase()}</span>
+                            <div className="flex items-center gap-1">
+                              <MessageCircle className="w-3 h-3" />
+                              <span>0</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Eye className="w-3 h-3" />
+                              <span>{blog.views}</span>
+                            </div>
+                          </div>
+                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 line-clamp-2">{blog.excerpt}</p>
+                        </div>
+                      </article>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Category Sections - Grid Layout */}
+            {Object.entries(categoryBlogs).map(([category, blogs]) => {
+              if (blogs.length === 0) return null;
+              return (
+                <section key={category} className="bg-white dark:bg-gray-800">
+                  <div className="mb-4 sm:mb-6 pb-2 sm:pb-3 border-b-2 border-yellow-600">
+                    <h2 className="text-xl sm:text-2xl font-bold text-yellow-600 uppercase">{category} NEWS</h2>
+                  </div>
+                  <div className=" sm:grid-cols-2 gap-4 sm:gap-6">
+                    {blogs.map((blog: Blog) => (
+                      <BlogCard key={blog._id} blog={blog} />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+
+          {/* Right Sidebar */}
+          <aside className="lg:col-span-1 space-y-4 sm:space-y-6">
+            {/* Sidebar with Tabs */}
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+              {/* Tabs */}
+              <div className="flex border-b border-gray-200 dark:border-gray-700">
+                <button className="flex-1 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-bold text-gray-900 dark:text-gray-100 border-b-2 border-yellow-600">
+                  Trending
+                </button>
+                <button className="flex-1 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
+                  Comments
+                </button>
+                <button className="flex-1 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
+                  Latest
+                </button>
+              </div>
+
+              {/* Tab Content */}
+              <div className="p-2 sm:p-4 space-y-3 sm:space-y-4">
+                {trendingBlogs.slice(0, 5).map((blog, index) => (
+                  <Link
+                    key={blog._id}
+                    href={`/blog/${blog.slug}`}
+                    className="block group"
+                  >
+                    <div className="flex gap-2 sm:gap-3">
+                      <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0 overflow-hidden bg-gray-200 dark:bg-gray-700">
+                        {blog.featuredImage ? (
+                          <Image
+                            src={blog.featuredImage}
+                            alt={blog.title}
+                            fill
+                            className="object-cover group-hover:scale-110 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gray-300 dark:bg-gray-600">
+                            <span className="text-gray-400 text-[10px]">No Image</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start gap-1 sm:gap-2 mb-1">
+                          <span className="text-yellow-600 font-bold text-base sm:text-lg flex-shrink-0">{index + 1}</span>
+                          <h3 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-gray-100 group-hover:text-yellow-600 transition-colors line-clamp-2">
+                            {blog.title}
+                          </h3>
+                        </div>
+                        <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
+                          {format(new Date(blog.createdAt), 'MMM dd, yyyy')}
+                        </div>
+                        <div className="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500 mt-1">0 SHARES</div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* Popular Stories with Numbers */}
+            {trendingBlogs.length > 0 && (
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+                <div className="mb-4 sm:mb-6 pb-2 sm:pb-3 border-b-2 border-yellow-600">
+                  <h2 className="text-lg sm:text-xl font-bold text-yellow-600 uppercase">POPULAR STORIES</h2>
+                </div>
+                <div className="space-y-3 sm:space-y-4">
+                  {trendingBlogs.slice(0, 5).map((blog, index) => (
+                    <Link
+                      key={blog._id}
+                      href={`/blog/${blog.slug}`}
+                      className="block group"
+                    >
+                      <div className="flex gap-3 sm:gap-4">
+                        <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                          <span className="text-lg sm:text-xl font-bold text-yellow-600">{index + 1}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-gray-100 group-hover:text-yellow-600 transition-colors line-clamp-2 mb-1">
+                            {blog.title}
+                          </h3>
+                          <div className="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500">0 SHARES</div>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </aside>
+        </div>
+
+        {/* Web Stories Section */}
+        <section className="mt-6 sm:mt-8 lg:mt-12">
+          <div className="mb-4 sm:mb-6 pb-2 sm:pb-3 border-b-2 border-yellow-600">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+              <h2 className="text-xl sm:text-2xl font-bold text-yellow-600 uppercase">WEB STORIES</h2>
+              <Link
+                href="/web-stories"
+                className="text-xs sm:text-sm lg:text-base text-secondary-blue hover:text-secondary-blue-dark font-semibold"
+              >
+                View All →
+              </Link>
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6 text-center">
+            <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mb-4">
+              Immersive visual stories coming soon. Check out our{' '}
+              <Link href="/web-stories" className="text-secondary-blue hover:underline font-semibold">
+                Web Stories
+              </Link>{' '}
+              section for the latest visual content.
+            </p>
+            <Link
+              href="/web-stories"
+              className="inline-block bg-secondary-blue text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold hover:bg-secondary-blue-dark transition-colors text-xs sm:text-sm lg:text-base"
+            >
+              Explore Web Stories
+            </Link>
+          </div>
+        </section>
+
+        {/* Empty State */}
+        {allBlogs.length === 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 sm:p-12 text-center">
+            <p className="text-gray-500 dark:text-gray-400 text-lg sm:text-xl mb-4">No blogs found.</p>
+            <p className="text-gray-400 dark:text-gray-500 text-sm sm:text-base">
+              Check back soon for the latest news and updates.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
